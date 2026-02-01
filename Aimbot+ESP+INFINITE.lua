@@ -450,9 +450,9 @@ updateFollowUI()
 
 
 --------------------------------------------------
--- SHOW GUI AFTER 9 SECONDS
+-- SHOW GUI AFTER 5 SECONDS
 --------------------------------------------------
-task.delay(9, function()
+task.delay(5, function()
 	main.Visible = true
 end)
 
