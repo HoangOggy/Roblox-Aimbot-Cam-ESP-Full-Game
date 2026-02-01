@@ -460,6 +460,19 @@ end)
 -- ESP FULL SCRIPT (FIXED)
 -- Delay 10s + Fade In + Safe Depth Check
 --==================================================
+-- ĐỢI PLAYER + CAMERA SẴN SÀNG
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+if not LocalPlayer.Character then
+    LocalPlayer.CharacterAdded:Wait()
+end
+
+repeat task.wait() until workspace.CurrentCamera
 
 --================ SETTINGS =================
 local settings = {
@@ -558,6 +571,11 @@ local function updateEsp(player, esp)
     end
 
     local pos, visible, depth = wtvp(hrp.Position)
+	-- FIX ESP không hiện lần đầu
+    if not visible or not depth or depth <= 0 then
+    for _,v in pairs(esp) do v.Visible = false end
+    return
+    end
 
     -- 🔒 FIX CHÍNH: chặn depth nil / 0 / âm
     if not visible or not depth or depth <= 0 then
