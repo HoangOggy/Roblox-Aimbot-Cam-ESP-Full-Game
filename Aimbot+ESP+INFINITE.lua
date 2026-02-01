@@ -5,258 +5,267 @@
     Made by HoangOggy
 ]]
 
---==================================================
--- INTRO + ESP COMBINED SCRIPT
--- Intro → Fade → ESP Active
--- Made for ST TEAM
---==================================================
-
---------------------------------------------------
--- SETTINGS
---------------------------------------------------
-local settings = {
-    defaultcolor = Color3.fromRGB(255,0,0),
-    teamcheck = false,
-    teamcolor = true,
-    showName = true,
-    showHealth = true
-}
-
 --------------------------------------------------
 -- SERVICES
 --------------------------------------------------
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
 
 --------------------------------------------------
--- INTRO STATE GATE
---------------------------------------------------
-local introFinished = false
-
---==================================================
 -- INTRO GUI
---==================================================
-do
-    local gui = Instance.new("ScreenGui")
-    gui.IgnoreGuiInset = true
-    gui.ResetOnSpawn = false
-    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+--------------------------------------------------
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
-    local bg = Instance.new("Frame")
-    bg.Size = UDim2.fromScale(1,1)
-    bg.BackgroundColor3 = Color3.fromRGB(5,5,5)
-    bg.Parent = gui
+local bg = Instance.new("Frame")
+bg.Size = UDim2.fromScale(1, 1)
+bg.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+bg.Parent = gui
 
-    local sweep = Instance.new("Frame")
-    sweep.Size = UDim2.fromScale(0.12,1.7)
-    sweep.Position = UDim2.fromScale(-0.6,-0.35)
-    sweep.BackgroundTransparency = 1
-    sweep.Rotation = 28
-    sweep.ZIndex = 20
-    sweep.Parent = gui
+-- GLASS SWEEP
+local sweep = Instance.new("Frame")
+sweep.Size = UDim2.fromScale(0.12, 1.7)
+sweep.Position = UDim2.fromScale(-0.6, -0.35)
+sweep.BackgroundTransparency = 1
+sweep.Rotation = 28
+sweep.ZIndex = 20
+sweep.Parent = gui
 
-    local sweepGrad = Instance.new("UIGradient")
-    sweepGrad.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0,1),
-        NumberSequenceKeypoint.new(0.5,0.25),
-        NumberSequenceKeypoint.new(1,1)
-    }
-    sweepGrad.Parent = sweep
+local sweepGrad = Instance.new("UIGradient")
+sweepGrad.Transparency = NumberSequence.new{
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.5, 0.25),
+    NumberSequenceKeypoint.new(1, 1),
+}
+sweepGrad.Parent = sweep
 
-    local text = Instance.new("TextLabel")
-    text.AnchorPoint = Vector2.new(0.5,0.5)
-    text.Position = UDim2.fromScale(0.5,0.5)
-    text.Size = UDim2.fromScale(0.2,0.08)
-    text.BackgroundTransparency = 1
-    text.Text = "ST TEAM"
-    text.Font = Enum.Font.GothamBlack
-    text.TextScaled = true
-    text.TextStrokeTransparency = 0
-    text.TextStrokeColor3 = Color3.new(0,0,0)
-    text.Parent = bg
+-- TEXT
+local text = Instance.new("TextLabel")
+text.AnchorPoint = Vector2.new(0.5, 0.5)
+text.Position = UDim2.fromScale(0.5, 0.5)
+text.Size = UDim2.fromScale(0.2, 0.08)
+text.BackgroundTransparency = 1
+text.Text = "ST TEAM"
+text.Font = Enum.Font.GothamBlack
+text.TextScaled = true
+text.TextStrokeTransparency = 0
+text.TextStrokeColor3 = Color3.new(0,0,0)
+text.Parent = bg
 
-    local textGrad = Instance.new("UIGradient")
-    textGrad.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,0,0)),
-        ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255,255,0)),
-        ColorSequenceKeypoint.new(0.4, Color3.fromRGB(0,255,0)),
-        ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0,255,255)),
-        ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0,0,255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255,0,255)),
-    }
-    textGrad.Parent = text
+local textGrad = Instance.new("UIGradient")
+textGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255,0,0)),
+    ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255,255,0)),
+    ColorSequenceKeypoint.new(0.4, Color3.fromRGB(0,255,0)),
+    ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0,255,255)),
+    ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0,0,255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255,0,255)),
+}
+textGrad.Parent = text
 
-    local rot = 0
-    local rainbowConn
-    rainbowConn = RunService.RenderStepped:Connect(function(dt)
-        rot += dt * 90
-        textGrad.Rotation = rot
-        sweepGrad.Rotation = -rot
-    end)
+-- RAINBOW ROTATE
+local rot = 0
+local rainbowConn = RunService.RenderStepped:Connect(function(dt)
+    rot += dt * 90
+    textGrad.Rotation = rot
+    sweepGrad.Rotation = -rot
+end)
 
-    TweenService:Create(
-        text,
-        TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        { Size = UDim2.fromScale(0.8,0.3) }
-    ):Play()
+-- ZOOM TEXT
+TweenService:Create(
+    text,
+    TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    { Size = UDim2.fromScale(0.8, 0.3) }
+):Play()
 
-    local SWEEP_COUNT = 2
-    local SWEEP_TIME = 1.5
+-- SWEEP LOOP
+local SWEEP_COUNT = 2
+local SWEEP_TIME = 1.5
 
-    task.delay(0.6, function()
-        for i = 1, SWEEP_COUNT do
-            sweep.Position = UDim2.fromScale(-0.6,-0.35)
-            sweep.BackgroundTransparency = 0
+task.delay(0.6, function()
+    for i = 1, SWEEP_COUNT do
+        sweep.Position = UDim2.fromScale(-0.6, -0.35)
+        sweep.BackgroundTransparency = 0
 
-            TweenService:Create(
-                sweep,
-                TweenInfo.new(SWEEP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                { Position = UDim2.fromScale(1.2,-0.35) }
-            ):Play()
+        TweenService:Create(
+            sweep,
+            TweenInfo.new(SWEEP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Position = UDim2.fromScale(1.2, -0.35) }
+        ):Play()
 
-            task.wait(SWEEP_TIME * 0.85)
-        end
-    end)
-
-    task.delay(0.6 + SWEEP_COUNT * SWEEP_TIME + 0.8, function()
-        rainbowConn:Disconnect()
-
-        local fade = TweenInfo.new(0.8)
-        TweenService:Create(text, fade, {
-            TextTransparency = 1,
-            TextStrokeTransparency = 1
-        }):Play()
-
-        TweenService:Create(bg, fade, {
-            BackgroundTransparency = 1
-        }):Play()
-
-        task.wait(0.9)
-        gui:Destroy()
-
-        -- 🔓 UNLOCK ESP
-        introFinished = true
-    end)
-end
-
---==================================================
--- ESP SYSTEM
---==================================================
-local newVector2, newDrawing = Vector2.new, Drawing.new
-local tan, rad = math.tan, math.rad
-
-local function wtvp(pos)
-    local p, v = Camera:WorldToViewportPoint(pos)
-    return newVector2(p.X,p.Y), v, p.Z
-end
-
-local espCache = {}
-
-local function createEsp(player)
-    local d = {}
-
-    d.box = newDrawing("Square")
-    d.box.Thickness = 1
-    d.box.Filled = false
-    d.box.Visible = false
-
-    d.outline = newDrawing("Square")
-    d.outline.Thickness = 3
-    d.outline.Filled = false
-    d.outline.Color = Color3.new(0,0,0)
-    d.outline.Visible = false
-
-    d.name = newDrawing("Text")
-    d.name.Size = 13
-    d.name.Center = true
-    d.name.Outline = true
-    d.name.Visible = false
-
-    d.health = newDrawing("Square")
-    d.health.Filled = true
-    d.health.Visible = false
-
-    d.healthOutline = newDrawing("Square")
-    d.healthOutline.Filled = false
-    d.healthOutline.Color = Color3.new(0,0,0)
-    d.healthOutline.Visible = false
-
-    espCache[player] = d
-end
-
-local function removeEsp(player)
-    if espCache[player] then
-        for _,v in pairs(espCache[player]) do
-            v:Remove()
-        end
-        espCache[player] = nil
-    end
-end
-
-RunService:BindToRenderStep("ESP", Enum.RenderPriority.Camera.Value, function()
-    if not introFinished then return end
-
-    for player,esp in pairs(espCache) do
-        if player == LocalPlayer then continue end
-        if settings.teamcheck and player.Team == LocalPlayer.Team then
-            for _,v in pairs(esp) do v.Visible = false end
-            continue
-        end
-
-        local char = player.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not (hum and hrp) then continue end
-
-        local pos, vis, depth = wtvp(hrp.Position)
-        if not vis then continue end
-
-        local scale = 1 / (depth * tan(rad(Camera.FieldOfView/2))*2) * 1000
-        local w,h = 4*scale,5*scale
-
-        esp.box.Size = newVector2(w,h)
-        esp.box.Position = newVector2(pos.X-w/2,pos.Y-h/2)
-        esp.box.Color = settings.teamcolor and player.TeamColor.Color or settings.defaultcolor
-        esp.box.Visible = true
-
-        esp.outline.Size = esp.box.Size
-        esp.outline.Position = esp.box.Position
-        esp.outline.Visible = true
-
-        if settings.showName then
-            esp.name.Text = "@"..player.Name
-            esp.name.Position = newVector2(pos.X,pos.Y-h/2-14)
-            esp.name.Color = esp.box.Color
-            esp.name.Visible = true
-        end
-
-        if settings.showHealth then
-            local hp = math.clamp(hum.Health/hum.MaxHealth,0,1)
-            esp.healthOutline.Size = newVector2(4,h)
-            esp.healthOutline.Position = newVector2(pos.X-w/2-6,pos.Y-h/2)
-            esp.healthOutline.Visible = true
-
-            esp.health.Size = newVector2(2,h*hp)
-            esp.health.Position = newVector2(
-                pos.X-w/2-5,
-                pos.Y+h/2-(h*hp)
-            )
-            esp.health.Color = Color3.fromRGB(255-(255*hp),255*hp,0)
-            esp.health.Visible = true
-        end
+        task.wait(SWEEP_TIME * 0.85)
     end
 end)
 
-for _,p in pairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then createEsp(p) end
+--------------------------------------------------
+-- ESP (BOX + OUTLINE TRẮNG)
+--------------------------------------------------
+local function startESP()
+
+    local settings = {
+        color = Color3.fromRGB(255,255,255), -- 🤍 TRẮNG
+        showName = true,
+        showHealth = true
+    }
+
+    local localPlayer = Players.LocalPlayer
+    local newVector2, newDrawing = Vector2.new, Drawing.new
+    local tan, rad = math.tan, math.rad
+
+    local function round(...)
+        local t = {}
+        for i,v in next, table.pack(...) do
+            t[i] = math.round(v)
+        end
+        return unpack(t)
+    end
+
+    local function wtvp(pos)
+        local v, onScreen = camera:WorldToViewportPoint(pos)
+        return newVector2(v.X, v.Y), onScreen, v.Z
+    end
+
+    local espCache = {}
+
+    local function createEsp(plr)
+        local d = {}
+
+        d.box = newDrawing("Square")
+        d.box.Thickness = 2
+        d.box.Filled = false
+        d.box.Color = settings.color
+        d.box.Visible = false
+
+        d.outline = newDrawing("Square")
+        d.outline.Thickness = 4
+        d.outline.Filled = false
+        d.outline.Color = settings.color -- ✅ TRẮNG
+        d.outline.Visible = false
+
+        d.name = newDrawing("Text")
+        d.name.Size = 13
+        d.name.Center = true
+        d.name.Outline = true
+        d.name.Font = 2
+        d.name.Color = settings.color
+        d.name.Visible = false
+
+        d.hpOutline = newDrawing("Square")
+        d.hpOutline.Filled = false
+        d.hpOutline.Thickness = 1
+        d.hpOutline.Color = settings.color -- ✅ TRẮNG
+        d.hpOutline.Visible = false
+
+        d.hpBar = newDrawing("Square")
+        d.hpBar.Filled = true
+        d.hpBar.Visible = false
+
+        espCache[plr] = d
+    end
+
+    local function removeEsp(plr)
+        if espCache[plr] then
+            for _,v in pairs(espCache[plr]) do
+                v:Remove()
+            end
+            espCache[plr] = nil
+        end
+    end
+
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= localPlayer then
+            createEsp(plr)
+        end
+    end
+
+    Players.PlayerAdded:Connect(createEsp)
+    Players.PlayerRemoving:Connect(removeEsp)
+
+    RunService:BindToRenderStep("ESP_RENDER", Enum.RenderPriority.Camera.Value, function()
+        for plr,esp in pairs(espCache) do
+            local char = plr.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+            if not (char and hum and hrp) then
+                for _,v in pairs(esp) do v.Visible = false end
+                continue
+            end
+
+            local pos, onScreen, depth = wtvp(hrp.Position)
+            if not onScreen then
+                for _,v in pairs(esp) do v.Visible = false end
+                continue
+            end
+
+            local scale = 1 / (depth * tan(rad(camera.FieldOfView / 2)) * 2) * 1000
+            local w,h = round(4*scale, 5*scale)
+            local x,y = round(pos.X, pos.Y)
+
+            esp.box.Size = newVector2(w,h)
+            esp.box.Position = newVector2(x-w/2, y-h/2)
+            esp.box.Visible = true
+
+            esp.outline.Size = esp.box.Size
+            esp.outline.Position = esp.box.Position
+            esp.outline.Visible = true
+
+            if settings.showName then
+                esp.name.Text = "@"..plr.Name
+                esp.name.Position = newVector2(x, y-h/2-14)
+                esp.name.Visible = true
+            else
+                esp.name.Visible = false
+            end
+
+            if settings.showHealth then
+                local hp = math.clamp(hum.Health/hum.MaxHealth,0,1)
+                local bh = h*hp
+
+                esp.hpOutline.Size = newVector2(4,h)
+                esp.hpOutline.Position = newVector2(x-w/2-6, y-h/2)
+                esp.hpOutline.Visible = true
+
+                esp.hpBar.Size = newVector2(2,bh)
+                esp.hpBar.Position = newVector2(x-w/2-5, y+h/2-bh)
+                esp.hpBar.Color = Color3.fromRGB(255-(255*hp),255*hp,0)
+                esp.hpBar.Visible = true
+            else
+                esp.hpBar.Visible = false
+                esp.hpOutline.Visible = false
+            end
+        end
+    end)
 end
 
-Players.PlayerAdded:Connect(createEsp)
-Players.PlayerRemoving:Connect(removeEsp)
+--------------------------------------------------
+-- END INTRO ➜ START ESP
+--------------------------------------------------
+task.delay(0.6 + SWEEP_COUNT * SWEEP_TIME + 0.8, function()
+    rainbowConn:Disconnect()
+
+    local fade = TweenInfo.new(0.8)
+    TweenService:Create(text, fade, {
+        TextTransparency = 1,
+        TextStrokeTransparency = 1
+    }):Play()
+
+    TweenService:Create(bg, fade, {
+        BackgroundTransparency = 1
+    }):Play()
+
+    task.wait(0.9)
+    gui:Destroy()
+
+    -- 🚀 START ESP
+    startESP()
+end)
 
 -- ==================================================
 -- ================= AIMBOT MENU ===================
