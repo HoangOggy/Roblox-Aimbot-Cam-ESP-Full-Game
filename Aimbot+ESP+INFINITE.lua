@@ -109,7 +109,7 @@ end)
 local function startESP()
 
     local settings = {
-        color = Color3.fromRGB(220,220,220), -- 🤍 TRẮNG DỊU
+        color = Color3.fromRGB(255,0,0), -- 🤍 TRẮNG DỊU
         showName = true,
         showHealth = true
     }
