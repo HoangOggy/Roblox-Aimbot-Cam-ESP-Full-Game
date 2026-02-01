@@ -456,10 +456,6 @@ task.delay(5, function()
 	main.Visible = true
 end)
 
--- ==================================================
--- ================= ESP PLAYER =====================
--- ==================================================
-
 --==================================================
 -- ESP FULL SCRIPT
 -- Delay 10s + Fade In Smooth
@@ -473,7 +469,7 @@ local settings = {
     showName = true,
     showHealth = true,
 
-    delayTime = 10,      -- ⏱ thời gian chờ (giây)
+    delayTime = 5,      -- ⏱ thời gian chờ (giây)
     fadeTime = 1.5       -- 🌫 thời gian fade in
 };
 
