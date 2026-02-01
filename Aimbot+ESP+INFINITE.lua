@@ -456,8 +456,11 @@ task.delay(5, function()
 	main.Visible = true
 end)
 
---================ ESP FIXED FULL =================
+--==================================================
+-- ESP FULL FIXED (ONE-CLICK ENABLE)
+--==================================================
 
+-- ===== WAIT GAME READY =====
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
@@ -466,23 +469,19 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
-if not LocalPlayer.Character then
-    LocalPlayer.CharacterAdded:Wait()
-end
-
 repeat task.wait() until workspace.CurrentCamera
 local Camera = workspace.CurrentCamera
 
---================ SETTINGS =================
+-- ===== SETTINGS =====
 local settings = {
-    defaultcolor = Color3.fromRGB(255,0,0),
+    defaultcolor = Color3.fromRGB(255, 0, 0),
     teamcheck = false,
     teamcolor = true,
     showName = true,
     showHealth = true
 }
 
---================ HELPERS =================
+-- ===== HELPERS =====
 local function wtvp(pos)
     local v, onscreen = Camera:WorldToViewportPoint(pos)
     return Vector2.new(v.X, v.Y), onscreen, v.Z
@@ -492,10 +491,11 @@ local function round(x, y)
     return math.round(x), math.round(y)
 end
 
---================ ESP STORAGE =================
+-- ===== ESP STORAGE =====
 local espCache = {}
+local espEnabled = false
 
---================ CREATE ESP =================
+-- ===== CREATE ESP =====
 local function createEsp(player)
     local esp = {}
 
@@ -539,7 +539,7 @@ local function removeEsp(player)
     end
 end
 
---================ UPDATE ESP =================
+-- ===== UPDATE ESP =====
 local function updateEsp(player, esp)
     local char = player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -552,7 +552,7 @@ local function updateEsp(player, esp)
 
     local pos, visible, depth = wtvp(hrp.Position)
 
-    -- FIX QUAN TRỌNG
+    -- 🔒 FIX CỐT LÕI
     if not visible or not depth or depth <= 0 then
         for _,v in pairs(esp) do v.Visible = false end
         return
@@ -587,6 +587,7 @@ local function updateEsp(player, esp)
 
     if settings.showHealth then
         local hp = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+
         esp.hpOutline.Size = Vector2.new(4, h)
         esp.hpOutline.Position = Vector2.new(x - w/2 - 6, y - h/2)
         esp.hpOutline.Visible = true
@@ -604,7 +605,25 @@ local function updateEsp(player, esp)
     end
 end
 
---================ INIT =================
+-- ===== SAFE ENABLE ESP (KHÔNG CẦN BẬT 2 LẦN) =====
+local function enableESP()
+    espEnabled = false
+
+    task.spawn(function()
+        if not LocalPlayer.Character then
+            LocalPlayer.CharacterAdded:Wait()
+        end
+
+        local char = LocalPlayer.Character
+        if not char:FindFirstChild("HumanoidRootPart") then
+            char:WaitForChild("HumanoidRootPart")
+        end
+
+        espEnabled = true
+    end)
+end
+
+-- ===== INIT PLAYERS =====
 for _,p in pairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then
         createEsp(p)
@@ -619,8 +638,13 @@ end)
 
 Players.PlayerRemoving:Connect(removeEsp)
 
---================ RENDER =================
+-- ===== AUTO ENABLE ON LOAD =====
+enableESP()
+
+-- ===== RENDER LOOP =====
 RunService:BindToRenderStep("ESP", Enum.RenderPriority.Camera.Value, function()
+    if not espEnabled then return end
+
     for p,esp in pairs(espCache) do
         if settings.teamcheck and p.Team == LocalPlayer.Team then
             for _,v in pairs(esp) do v.Visible = false end
