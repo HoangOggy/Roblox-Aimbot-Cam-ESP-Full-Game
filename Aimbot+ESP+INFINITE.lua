@@ -165,6 +165,7 @@ main.Position = UDim2.new(0, 40, 0.5, -165)
 main.BackgroundColor3 = Color3.fromRGB(25,25,25)
 main.Active = true
 main.Draggable = true
+main.Visible = false -- ẨN BAN ĐẦU
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
 
 
@@ -209,7 +210,7 @@ Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(1,0)
 
 
 --------------------------------------------------
--- AIM ICON (EMOJI 🎯)
+-- AIM ICON
 --------------------------------------------------
 local aimIcon = Instance.new("TextButton", gui)
 aimIcon.Size = UDim2.new(0,48,0,48)
@@ -285,27 +286,27 @@ layout.Padding = UDim.new(0,6)
 -- FUNCTIONS
 --------------------------------------------------
 local function updateFollowUI()
-    followBtn.Text = following and "Follow: ON" or "Follow: OFF"
-    followBtn.BackgroundColor3 = following
-        and Color3.fromRGB(60,200,100)
-        or Color3.fromRGB(200,60,60)
+	followBtn.Text = following and "Follow: ON" or "Follow: OFF"
+	followBtn.BackgroundColor3 = following
+		and Color3.fromRGB(60,200,100)
+		or Color3.fromRGB(200,60,60)
 end
 
 local function toggleFollow()
-    following = not following
-    updateFollowUI()
+	following = not following
+	updateFollowUI()
 end
 
 local function setMinimized(state)
-    minimized = state
-    if minimized then
-        main.Visible = false
-        aimIcon.Position = main.Position
-        aimIcon.Visible = true
-    else
-        main.Visible = true
-        aimIcon.Visible = false
-    end
+	minimized = state
+	if minimized then
+		main.Visible = false
+		aimIcon.Position = main.Position
+		aimIcon.Visible = true
+	else
+		main.Visible = true
+		aimIcon.Visible = false
+	end
 end
 
 
@@ -315,23 +316,23 @@ end
 followBtn.MouseButton1Click:Connect(toggleFollow)
 
 hotkeyBtn.MouseButton1Click:Connect(function()
-    waitingForKey = true
-    hotkeyBtn.Text = "Press a key..."
+	waitingForKey = true
+	hotkeyBtn.Text = "Press a key..."
 end)
 
 minimizeBtn.MouseButton1Click:Connect(function()
-    setMinimized(true)
+	setMinimized(true)
 end)
 
 aimIcon.MouseButton1Click:Connect(function()
-    setMinimized(false)
+	setMinimized(false)
 end)
 
 lockBtn.MouseButton1Click:Connect(function()
-    locked = not locked
-    main.Draggable = not locked
-    aimIcon.Draggable = not locked
-    lockBtn.Text = locked and "🔒" or "🔓"
+	locked = not locked
+	main.Draggable = not locked
+	aimIcon.Draggable = not locked
+	lockBtn.Text = locked and "🔒" or "🔓"
 end)
 
 
@@ -339,43 +340,43 @@ end)
 -- INPUT
 --------------------------------------------------
 UIS.InputBegan:Connect(function(input, gp)
-    if UIS:GetFocusedTextBox() then return end
+	if UIS:GetFocusedTextBox() then return end
 
-    if input.KeyCode == hotkey then
-        toggleFollow()
-        return
-    end
+	if input.KeyCode == hotkey then
+		toggleFollow()
+		return
+	end
 
-    if gp then return end
+	if gp then return end
 
-    if input.UserInputType == Enum.UserInputType.MouseButton2 and following then
-        holdingRight = true
-        local mousePos = UIS:GetMouseLocation()
-        local closest, dist = nil, math.huge
+	if input.UserInputType == Enum.UserInputType.MouseButton2 and following then
+		holdingRight = true
+		local mousePos = UIS:GetMouseLocation()
+		local closest, dist = nil, math.huge
 
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
-                if not safeList[plr.Name] then
-                    local pos, visible = Camera:WorldToScreenPoint(plr.Character.Head.Position)
-                    if visible then
-                        local d = (Vector2.new(pos.X,pos.Y) - mousePos).Magnitude
-                        if d < dist then
-                            dist = d
-                            closest = plr
-                        end
-                    end
-                end
-            end
-        end
-        targetPlayer = closest
-    end
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
+				if not safeList[plr.Name] then
+					local pos, visible = Camera:WorldToScreenPoint(plr.Character.Head.Position)
+					if visible then
+						local d = (Vector2.new(pos.X,pos.Y) - mousePos).Magnitude
+						if d < dist then
+							dist = d
+							closest = plr
+						end
+					end
+				end
+			end
+		end
+		targetPlayer = closest
+	end
 end)
 
 UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        holdingRight = false
-        targetPlayer = nil
-    end
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		holdingRight = false
+		targetPlayer = nil
+	end
 end)
 
 
@@ -383,11 +384,11 @@ end)
 -- HOTKEY CHANGE
 --------------------------------------------------
 UIS.InputBegan:Connect(function(input)
-    if waitingForKey and input.KeyCode ~= Enum.KeyCode.Unknown then
-        hotkey = input.KeyCode
-        hotkeyBtn.Text = "Hotkey: "..hotkey.Name
-        waitingForKey = false
-    end
+	if waitingForKey and input.KeyCode ~= Enum.KeyCode.Unknown then
+		hotkey = input.KeyCode
+		hotkeyBtn.Text = "Hotkey: " .. hotkey.Name
+		waitingForKey = false
+	end
 end)
 
 
@@ -395,12 +396,12 @@ end)
 -- CAMERA FOLLOW
 --------------------------------------------------
 RunService.RenderStepped:Connect(function()
-    if holdingRight and targetPlayer and targetPlayer.Character then
-        local head = targetPlayer.Character:FindFirstChild("Head")
-        if head then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
-        end
-    end
+	if holdingRight and targetPlayer and targetPlayer.Character then
+		local head = targetPlayer.Character:FindFirstChild("Head")
+		if head then
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
+		end
+	end
 end)
 
 
@@ -408,34 +409,36 @@ end)
 -- PLAYER LIST
 --------------------------------------------------
 local function refreshList()
-    for _, v in ipairs(listFrame:GetChildren()) do
-        if v:IsA("TextButton") then v:Destroy() end
-    end
+	for _, v in ipairs(listFrame:GetChildren()) do
+		if v:IsA("TextButton") then
+			v:Destroy()
+		end
+	end
 
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            if searchBox.Text == "" or plr.Name:lower():find(searchBox.Text:lower()) then
-                local btn = Instance.new("TextButton", listFrame)
-                btn.Size = UDim2.new(1,-6,0,28)
-                btn.Text = plr.Name .. (safeList[plr.Name] and " [SAFE]" or "")
-                btn.Font = Enum.Font.Gotham
-                btn.TextSize = 13
-                btn.TextColor3 = Color3.new(1,1,1)
-                btn.BackgroundColor3 = safeList[plr.Name]
-                    and Color3.fromRGB(80,120,80)
-                    or Color3.fromRGB(50,50,50)
-                Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer then
+			if searchBox.Text == "" or plr.Name:lower():find(searchBox.Text:lower()) then
+				local btn = Instance.new("TextButton", listFrame)
+				btn.Size = UDim2.new(1,-6,0,28)
+				btn.Text = plr.Name .. (safeList[plr.Name] and " [SAFE]" or "")
+				btn.Font = Enum.Font.Gotham
+				btn.TextSize = 13
+				btn.TextColor3 = Color3.new(1,1,1)
+				btn.BackgroundColor3 = safeList[plr.Name]
+					and Color3.fromRGB(80,120,80)
+					or Color3.fromRGB(50,50,50)
+				Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
-                btn.MouseButton1Click:Connect(function()
-                    safeList[plr.Name] = not safeList[plr.Name]
-                    refreshList()
-                end)
-            end
-        end
-    end
+				btn.MouseButton1Click:Connect(function()
+					safeList[plr.Name] = not safeList[plr.Name]
+					refreshList()
+				end)
+			end
+		end
+	end
 
-    task.wait()
-    listFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 6)
+	task.wait()
+	listFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 6)
 end
 
 searchBox:GetPropertyChangedSignal("Text"):Connect(refreshList)
@@ -444,6 +447,14 @@ Players.PlayerRemoving:Connect(refreshList)
 
 refreshList()
 updateFollowUI()
+
+
+--------------------------------------------------
+-- SHOW GUI AFTER 5 SECONDS
+--------------------------------------------------
+task.delay(3, function()
+	main.Visible = true
+end)
 
 -- ==================================================
 -- ================= ESP SECTION ===================
