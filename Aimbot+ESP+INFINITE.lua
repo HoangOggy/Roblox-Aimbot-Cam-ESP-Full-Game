@@ -5,6 +5,124 @@
     Made by HoangOggy
 ]]
 
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- BACKGROUND
+local bg = Instance.new("Frame")
+bg.Size = UDim2.fromScale(1, 1)
+bg.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+bg.Parent = gui
+
+-- THIN GLASS SWEEP
+local sweep = Instance.new("Frame")
+sweep.Size = UDim2.fromScale(0.12, 1.7) -- 👈 MỎNG HƠN
+sweep.Position = UDim2.fromScale(-0.6, -0.35)
+sweep.BackgroundTransparency = 1
+sweep.Rotation = 28
+sweep.ZIndex = 20
+sweep.Parent = gui
+
+-- SWEEP GRADIENT
+local sweepGrad = Instance.new("UIGradient")
+sweepGrad.Transparency = NumberSequence.new{
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.5, 0.25),
+    NumberSequenceKeypoint.new(1, 1),
+}
+sweepGrad.Parent = sweep
+
+-- TEXT
+local text = Instance.new("TextLabel")
+text.AnchorPoint = Vector2.new(0.5, 0.5)
+text.Position = UDim2.fromScale(0.5, 0.5)
+text.Size = UDim2.fromScale(0.2, 0.08)
+text.BackgroundTransparency = 1
+text.Text = "ST TEAM"
+text.Font = Enum.Font.GothamBlack
+text.TextScaled = true
+text.TextStrokeTransparency = 0
+text.TextStrokeColor3 = Color3.new(0,0,0)
+text.Parent = bg
+
+-- TEXT RAINBOW
+local textGrad = Instance.new("UIGradient")
+textGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255,0,0)),
+    ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255,255,0)),
+    ColorSequenceKeypoint.new(0.4, Color3.fromRGB(0,255,0)),
+    ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0,255,255)),
+    ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0,0,255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255,0,255)),
+}
+textGrad.Parent = text
+
+-- 🌈 RAINBOW ROTATE
+local rot = 0
+local rainbowConn = RunService.RenderStepped:Connect(function(dt)
+    rot += dt * 90
+    textGrad.Rotation = rot
+    sweepGrad.Rotation = -rot
+end)
+
+-- ZOOM TEXT
+TweenService:Create(
+    text,
+    TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    { Size = UDim2.fromScale(0.8, 0.3) }
+):Play()
+
+-- 🔁 MULTI SWEEP LOOP
+local SWEEP_COUNT = 2      -- 👈 SỐ VÒNG (tăng số này nếu muốn)
+local SWEEP_TIME  = 1.5    -- 👈 thời gian mỗi vòng
+
+task.delay(0.6, function()
+    for i = 1, SWEEP_COUNT do
+        sweep.Position = UDim2.fromScale(-0.6, -0.35)
+        sweep.BackgroundTransparency = 0
+
+        TweenService:Create(
+            sweep,
+            TweenInfo.new(SWEEP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Position = UDim2.fromScale(1.2, -0.35) }
+        ):Play()
+
+        task.wait(SWEEP_TIME * 0.85)
+    end
+end)
+
+-- FADE OUT
+task.delay(0.6 + SWEEP_COUNT * SWEEP_TIME + 0.8, function()
+    rainbowConn:Disconnect()
+
+    local fade = TweenInfo.new(0.8)
+
+    TweenService:Create(text, fade, {
+        TextTransparency = 1,
+        TextStrokeTransparency = 1
+    }):Play()
+
+    TweenService:Create(bg, fade, {
+        BackgroundTransparency = 1
+    }):Play()
+
+    task.wait(0.9)
+    gui:Destroy()
+end)
+
+-- ==================================================
+-- ================= AIMBOT MENU ===================
+-- ==================================================
+
 --------------------------------------------------
 -- SERVICES
 --------------------------------------------------
