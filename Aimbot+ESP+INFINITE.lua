@@ -456,23 +456,22 @@ task.delay(5, function()
 	main.Visible = true
 end)
 
---==================================================
--- ESP FULL SCRIPT (FIXED)
--- Delay 10s + Fade In + Safe Depth Check
---==================================================
--- ĐỢI PLAYER + CAMERA SẴN SÀNG
+--================ ESP FIXED FULL =================
+
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
+local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer.Character then
     LocalPlayer.CharacterAdded:Wait()
 end
 
 repeat task.wait() until workspace.CurrentCamera
+local Camera = workspace.CurrentCamera
 
 --================ SETTINGS =================
 local settings = {
@@ -480,70 +479,51 @@ local settings = {
     teamcheck = false,
     teamcolor = true,
     showName = true,
-    showHealth = true,
-
-    delayTime = 10,   -- thời gian chờ bật ESP
-    fadeTime  = 1.5   -- thời gian fade in
-};
-
---================ SERVICES =================
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-
---================ VARIABLES =================
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-
-local newVector2 = Vector2.new
-local newDrawing = Drawing.new
-local tan, rad = math.tan, math.rad
+    showHealth = true
+}
 
 --================ HELPERS =================
-local function round(x, y)
-    return math.round(x), math.round(y)
-end
-
 local function wtvp(pos)
     local v, onscreen = Camera:WorldToViewportPoint(pos)
     return Vector2.new(v.X, v.Y), onscreen, v.Z
 end
 
+local function round(x, y)
+    return math.round(x), math.round(y)
+end
+
 --================ ESP STORAGE =================
 local espCache = {}
-local espEnabled = false
-local fadeAlpha = 0
 
 --================ CREATE ESP =================
 local function createEsp(player)
     local esp = {}
 
-    esp.box = newDrawing("Square")
+    esp.box = Drawing.new("Square")
     esp.box.Thickness = 1
     esp.box.Filled = false
     esp.box.Visible = false
-    esp.box.ZIndex = 2
 
-    esp.outline = newDrawing("Square")
+    esp.outline = Drawing.new("Square")
     esp.outline.Thickness = 3
     esp.outline.Filled = false
     esp.outline.Color = Color3.new(0,0,0)
     esp.outline.Visible = false
-    esp.outline.ZIndex = 1
 
-    esp.name = newDrawing("Text")
+    esp.name = Drawing.new("Text")
     esp.name.Size = 13
     esp.name.Center = true
     esp.name.Outline = true
     esp.name.Font = 2
     esp.name.Visible = false
 
-    esp.hpOutline = newDrawing("Square")
+    esp.hpOutline = Drawing.new("Square")
     esp.hpOutline.Filled = false
     esp.hpOutline.Thickness = 1
     esp.hpOutline.Color = Color3.new(0,0,0)
     esp.hpOutline.Visible = false
 
-    esp.hpBar = newDrawing("Square")
+    esp.hpBar = Drawing.new("Square")
     esp.hpBar.Filled = true
     esp.hpBar.Visible = false
 
@@ -571,69 +551,52 @@ local function updateEsp(player, esp)
     end
 
     local pos, visible, depth = wtvp(hrp.Position)
-	-- FIX ESP không hiện lần đầu
-    if not visible or not depth or depth <= 0 then
-    for _,v in pairs(esp) do v.Visible = false end
-    return
-    end
 
-    -- 🔒 FIX CHÍNH: chặn depth nil / 0 / âm
+    -- FIX QUAN TRỌNG
     if not visible or not depth or depth <= 0 then
         for _,v in pairs(esp) do v.Visible = false end
         return
     end
 
-    -- 🔒 scaleFactor an toàn tuyệt đối
-    local fov = Camera.FieldOfView
-    local denom = depth * tan(rad(fov * 0.5)) * 2
-    if not denom or denom <= 0 then return end
+    local denom = depth * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2
+    if denom <= 0 then return end
 
-    local scaleFactor = 1000 / denom
-    local width, height = round(4 * scaleFactor, 5 * scaleFactor)
+    local scale = 1000 / denom
+    local w, h = round(4 * scale, 5 * scale)
     local x, y = round(pos.X, pos.Y)
 
     local color = settings.teamcolor and player.TeamColor.Color or settings.defaultcolor
 
-    -- BOX
-    esp.box.Size = newVector2(width, height)
-    esp.box.Position = newVector2(x - width/2, y - height/2)
+    esp.box.Size = Vector2.new(w, h)
+    esp.box.Position = Vector2.new(x - w/2, y - h/2)
     esp.box.Color = color
-    esp.box.Transparency = fadeAlpha
     esp.box.Visible = true
 
     esp.outline.Size = esp.box.Size
     esp.outline.Position = esp.box.Position
-    esp.outline.Transparency = fadeAlpha
     esp.outline.Visible = true
 
-    -- NAME
     if settings.showName then
-        esp.name.Text = "@" .. player.Name
-        esp.name.Position = newVector2(x, y - height/2 - 14)
+        esp.name.Text = player.Name
+        esp.name.Position = Vector2.new(x, y - h/2 - 14)
         esp.name.Color = color
-        esp.name.Transparency = fadeAlpha
         esp.name.Visible = true
     else
         esp.name.Visible = false
     end
 
-    -- HEALTH
     if settings.showHealth then
         local hp = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-        local barHeight = height * hp
-
-        esp.hpOutline.Size = newVector2(4, height)
-        esp.hpOutline.Position = newVector2(x - width/2 - 6, y - height/2)
-        esp.hpOutline.Transparency = fadeAlpha
+        esp.hpOutline.Size = Vector2.new(4, h)
+        esp.hpOutline.Position = Vector2.new(x - w/2 - 6, y - h/2)
         esp.hpOutline.Visible = true
 
-        esp.hpBar.Size = newVector2(2, barHeight)
-        esp.hpBar.Position = newVector2(
-            x - width/2 - 5,
-            y + height/2 - barHeight
+        esp.hpBar.Size = Vector2.new(2, h * hp)
+        esp.hpBar.Position = Vector2.new(
+            x - w/2 - 5,
+            y + h/2 - (h * hp)
         )
         esp.hpBar.Color = Color3.fromRGB(255 - 255*hp, 255*hp, 0)
-        esp.hpBar.Transparency = fadeAlpha
         esp.hpBar.Visible = true
     else
         esp.hpOutline.Visible = false
@@ -648,30 +611,21 @@ for _,p in pairs(Players:GetPlayers()) do
     end
 end
 
-Players.PlayerAdded:Connect(createEsp)
-Players.PlayerRemoving:Connect(removeEsp)
-
---================ DELAY + FADE =================
-task.spawn(function()
-    task.wait(settings.delayTime)
-    espEnabled = true
-
-    local start = tick()
-    while fadeAlpha < 1 do
-        fadeAlpha = math.clamp((tick() - start) / settings.fadeTime, 0, 1)
-        task.wait()
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then
+        createEsp(p)
     end
 end)
 
+Players.PlayerRemoving:Connect(removeEsp)
+
 --================ RENDER =================
 RunService:BindToRenderStep("ESP", Enum.RenderPriority.Camera.Value, function()
-    if not espEnabled then return end
-
-    for player, esp in pairs(espCache) do
-        if settings.teamcheck and player.Team == LocalPlayer.Team then
+    for p,esp in pairs(espCache) do
+        if settings.teamcheck and p.Team == LocalPlayer.Team then
             for _,v in pairs(esp) do v.Visible = false end
-        elseif player ~= LocalPlayer then
-            updateEsp(player, esp)
+        else
+            updateEsp(p, esp)
         end
     end
 end)
