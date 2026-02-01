@@ -457,11 +457,11 @@ task.delay(5, function()
 end)
 
 --==================================================
--- ESP FULL SCRIPT
--- Delay 10s + Fade In Smooth
+-- ESP FULL SCRIPT (FIXED)
+-- Delay 10s + Fade In + Safe Depth Check
 --==================================================
 
--- settings
+--================ SETTINGS =================
 local settings = {
     defaultcolor = Color3.fromRGB(255,0,0),
     teamcheck = false,
@@ -469,214 +469,194 @@ local settings = {
     showName = true,
     showHealth = true,
 
-    delayTime = 5,      -- ⏱ thời gian chờ (giây)
-    fadeTime = 1.5       -- 🌫 thời gian fade in
+    delayTime = 10,   -- thời gian chờ bật ESP
+    fadeTime  = 1.5   -- thời gian fade in
 };
 
--- services
-local runService = game:GetService("RunService");
-local players = game:GetService("Players");
+--================ SERVICES =================
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
--- variables
-local localPlayer = players.LocalPlayer;
-local camera = workspace.CurrentCamera;
+--================ VARIABLES =================
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
--- math / drawing helpers
-local newVector2, newColor3, newDrawing = Vector2.new, Color3.new, Drawing.new;
-local tan, rad = math.tan, math.rad;
+local newVector2 = Vector2.new
+local newDrawing = Drawing.new
+local tan, rad = math.tan, math.rad
 
-local round = function(...)
-    local a = {};
-    for i,v in next, table.pack(...) do
-        a[i] = math.round(v);
-    end
-    return unpack(a);
-end;
+--================ HELPERS =================
+local function round(x, y)
+    return math.round(x), math.round(y)
+end
 
-local wtvp = function(...)
-    local a, b = camera:WorldToViewportPoint(...)
-    return newVector2(a.X, a.Y), b, a.Z
-end;
+local function wtvp(pos)
+    local v, onscreen = Camera:WorldToViewportPoint(pos)
+    return Vector2.new(v.X, v.Y), onscreen, v.Z
+end
 
---==================================================
--- ESP CACHE
---==================================================
-local espCache = {};
-local espEnabled = false;
-local fadeAlpha = 0;
+--================ ESP STORAGE =================
+local espCache = {}
+local espEnabled = false
+local fadeAlpha = 0
 
---==================================================
--- CREATE ESP
---==================================================
+--================ CREATE ESP =================
 local function createEsp(player)
-    local drawings = {};
+    local esp = {}
 
-    drawings.box = newDrawing("Square");
-    drawings.box.Thickness = 1;
-    drawings.box.Filled = false;
-    drawings.box.Visible = false;
-    drawings.box.ZIndex = 2;
-    drawings.box.Transparency = 0;
+    esp.box = newDrawing("Square")
+    esp.box.Thickness = 1
+    esp.box.Filled = false
+    esp.box.Visible = false
+    esp.box.ZIndex = 2
 
-    drawings.boxoutline = newDrawing("Square");
-    drawings.boxoutline.Thickness = 3;
-    drawings.boxoutline.Filled = false;
-    drawings.boxoutline.Color = Color3.new(0,0,0);
-    drawings.boxoutline.Visible = false;
-    drawings.boxoutline.ZIndex = 1;
-    drawings.boxoutline.Transparency = 0;
+    esp.outline = newDrawing("Square")
+    esp.outline.Thickness = 3
+    esp.outline.Filled = false
+    esp.outline.Color = Color3.new(0,0,0)
+    esp.outline.Visible = false
+    esp.outline.ZIndex = 1
 
-    drawings.name = newDrawing("Text");
-    drawings.name.Size = 13;
-    drawings.name.Center = true;
-    drawings.name.Outline = true;
-    drawings.name.Font = 2;
-    drawings.name.Visible = false;
-    drawings.name.Transparency = 0;
+    esp.name = newDrawing("Text")
+    esp.name.Size = 13
+    esp.name.Center = true
+    esp.name.Outline = true
+    esp.name.Font = 2
+    esp.name.Visible = false
 
-    drawings.healthOutline = newDrawing("Square");
-    drawings.healthOutline.Filled = false;
-    drawings.healthOutline.Thickness = 1;
-    drawings.healthOutline.Color = Color3.new(0,0,0);
-    drawings.healthOutline.Visible = false;
-    drawings.healthOutline.Transparency = 0;
+    esp.hpOutline = newDrawing("Square")
+    esp.hpOutline.Filled = false
+    esp.hpOutline.Thickness = 1
+    esp.hpOutline.Color = Color3.new(0,0,0)
+    esp.hpOutline.Visible = false
 
-    drawings.healthBar = newDrawing("Square");
-    drawings.healthBar.Filled = true;
-    drawings.healthBar.Visible = false;
-    drawings.healthBar.Transparency = 0;
+    esp.hpBar = newDrawing("Square")
+    esp.hpBar.Filled = true
+    esp.hpBar.Visible = false
 
-    espCache[player] = drawings;
+    espCache[player] = esp
 end
 
 local function removeEsp(player)
     if espCache[player] then
-        for _, d in pairs(espCache[player]) do
-            d:Remove();
+        for _,v in pairs(espCache[player]) do
+            v:Remove()
         end
-        espCache[player] = nil;
+        espCache[player] = nil
     end
 end
 
---==================================================
--- UPDATE ESP
---==================================================
+--================ UPDATE ESP =================
 local function updateEsp(player, esp)
-    local character = player.Character;
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid");
-    local hrp = character and character:FindFirstChild("HumanoidRootPart");
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
-    if not (character and humanoid and hrp) then
+    if not (char and hum and hrp) then
         for _,v in pairs(esp) do v.Visible = false end
-        return;
+        return
     end
 
-    local pos, visible, depth = wtvp(hrp.Position);
-    if not visible then
+    local pos, visible, depth = wtvp(hrp.Position)
+
+    -- 🔒 FIX CHÍNH: chặn depth nil / 0 / âm
+    if not visible or not depth or depth <= 0 then
         for _,v in pairs(esp) do v.Visible = false end
-        return;
+        return
     end
 
-    local scaleFactor = 1 / (depth * tan(rad(camera.FieldOfView / 2)) * 2) * 1000;
-    local width, height = round(4 * scaleFactor, 5 * scaleFactor);
-    local x, y = round(pos.X, pos.Y);
+    -- 🔒 scaleFactor an toàn tuyệt đối
+    local fov = Camera.FieldOfView
+    local denom = depth * tan(rad(fov * 0.5)) * 2
+    if not denom or denom <= 0 then return end
 
-    local mainColor = settings.teamcolor and player.TeamColor.Color or settings.defaultcolor;
+    local scaleFactor = 1000 / denom
+    local width, height = round(4 * scaleFactor, 5 * scaleFactor)
+    local x, y = round(pos.X, pos.Y)
+
+    local color = settings.teamcolor and player.TeamColor.Color or settings.defaultcolor
 
     -- BOX
-    esp.box.Size = newVector2(width, height);
-    esp.box.Position = newVector2(x - width/2, y - height/2);
-    esp.box.Color = mainColor;
-    esp.box.Transparency = fadeAlpha;
-    esp.box.Visible = true;
+    esp.box.Size = newVector2(width, height)
+    esp.box.Position = newVector2(x - width/2, y - height/2)
+    esp.box.Color = color
+    esp.box.Transparency = fadeAlpha
+    esp.box.Visible = true
 
-    esp.boxoutline.Size = esp.box.Size;
-    esp.boxoutline.Position = esp.box.Position;
-    esp.boxoutline.Transparency = fadeAlpha;
-    esp.boxoutline.Visible = true;
+    esp.outline.Size = esp.box.Size
+    esp.outline.Position = esp.box.Position
+    esp.outline.Transparency = fadeAlpha
+    esp.outline.Visible = true
 
     -- NAME
     if settings.showName then
-        esp.name.Text = "@" .. player.Name;
-        esp.name.Position = newVector2(x, y - height/2 - 14);
-        esp.name.Color = mainColor;
-        esp.name.Transparency = fadeAlpha;
-        esp.name.Visible = true;
+        esp.name.Text = "@" .. player.Name
+        esp.name.Position = newVector2(x, y - height/2 - 14)
+        esp.name.Color = color
+        esp.name.Transparency = fadeAlpha
+        esp.name.Visible = true
     else
-        esp.name.Visible = false;
+        esp.name.Visible = false
     end
 
     -- HEALTH
     if settings.showHealth then
-        local hp = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1);
-        local barHeight = height * hp;
+        local hp = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+        local barHeight = height * hp
 
-        esp.healthOutline.Size = newVector2(4, height);
-        esp.healthOutline.Position = newVector2(x - width/2 - 6, y - height/2);
-        esp.healthOutline.Transparency = fadeAlpha;
-        esp.healthOutline.Visible = true;
+        esp.hpOutline.Size = newVector2(4, height)
+        esp.hpOutline.Position = newVector2(x - width/2 - 6, y - height/2)
+        esp.hpOutline.Transparency = fadeAlpha
+        esp.hpOutline.Visible = true
 
-        esp.healthBar.Size = newVector2(2, barHeight);
-        esp.healthBar.Position = newVector2(
+        esp.hpBar.Size = newVector2(2, barHeight)
+        esp.hpBar.Position = newVector2(
             x - width/2 - 5,
             y + height/2 - barHeight
-        );
-        esp.healthBar.Color = Color3.fromRGB(
-            255 - (255 * hp),
-            255 * hp,
-            0
-        );
-        esp.healthBar.Transparency = fadeAlpha;
-        esp.healthBar.Visible = true;
+        )
+        esp.hpBar.Color = Color3.fromRGB(255 - 255*hp, 255*hp, 0)
+        esp.hpBar.Transparency = fadeAlpha
+        esp.hpBar.Visible = true
     else
-        esp.healthBar.Visible = false;
-        esp.healthOutline.Visible = false;
+        esp.hpOutline.Visible = false
+        esp.hpBar.Visible = false
     end
 end
 
---==================================================
--- INIT (CREATE PLAYER ESP)
---==================================================
-for _, player in pairs(players:GetPlayers()) do
-    if player ~= localPlayer then
-        createEsp(player);
+--================ INIT =================
+for _,p in pairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then
+        createEsp(p)
     end
 end
 
-players.PlayerAdded:Connect(createEsp);
-players.PlayerRemoving:Connect(removeEsp);
+Players.PlayerAdded:Connect(createEsp)
+Players.PlayerRemoving:Connect(removeEsp)
 
---==================================================
--- DELAY + FADE IN
---==================================================
+--================ DELAY + FADE =================
 task.spawn(function()
-    task.wait(settings.delayTime);
-    espEnabled = true;
+    task.wait(settings.delayTime)
+    espEnabled = true
 
-    local start = tick();
+    local start = tick()
     while fadeAlpha < 1 do
-        fadeAlpha = math.clamp((tick() - start) / settings.fadeTime, 0, 1);
-        task.wait();
+        fadeAlpha = math.clamp((tick() - start) / settings.fadeTime, 0, 1)
+        task.wait()
     end
-end);
+end)
 
---==================================================
--- RENDER LOOP
---==================================================
-runService:BindToRenderStep("ESP", Enum.RenderPriority.Camera.Value, function()
+--================ RENDER =================
+RunService:BindToRenderStep("ESP", Enum.RenderPriority.Camera.Value, function()
     if not espEnabled then return end
 
-    for player, drawings in pairs(espCache) do
-        if settings.teamcheck and player.Team == localPlayer.Team then
-            for _,v in pairs(drawings) do v.Visible = false end
-            continue;
-        end
-
-        if player ~= localPlayer then
-            updateEsp(player, drawings);
+    for player, esp in pairs(espCache) do
+        if settings.teamcheck and player.Team == LocalPlayer.Team then
+            for _,v in pairs(esp) do v.Visible = false end
+        elseif player ~= LocalPlayer then
+            updateEsp(player, esp)
         end
     end
-end);
+end)
 
 -- ==================================================
 -- ================= INFINITE YIELD =================
