@@ -104,12 +104,12 @@ task.delay(0.6, function()
 end)
 
 --------------------------------------------------
--- ESP (BOX + OUTLINE TRẮNG)
+-- ESP (WHITE SOFT)
 --------------------------------------------------
 local function startESP()
 
     local settings = {
-        color = Color3.fromRGB(255,255,255), -- 🤍 TRẮNG
+        color = Color3.fromRGB(220,220,220), -- 🤍 TRẮNG DỊU
         showName = true,
         showHealth = true
     }
@@ -137,15 +137,15 @@ local function startESP()
         local d = {}
 
         d.box = newDrawing("Square")
-        d.box.Thickness = 2
+        d.box.Thickness = 1.5
         d.box.Filled = false
         d.box.Color = settings.color
         d.box.Visible = false
 
         d.outline = newDrawing("Square")
-        d.outline.Thickness = 4
+        d.outline.Thickness = 3
         d.outline.Filled = false
-        d.outline.Color = settings.color -- ✅ TRẮNG
+        d.outline.Color = settings.color
         d.outline.Visible = false
 
         d.name = newDrawing("Text")
@@ -159,7 +159,7 @@ local function startESP()
         d.hpOutline = newDrawing("Square")
         d.hpOutline.Filled = false
         d.hpOutline.Thickness = 1
-        d.hpOutline.Color = settings.color -- ✅ TRẮNG
+        d.hpOutline.Color = settings.color
         d.hpOutline.Visible = false
 
         d.hpBar = newDrawing("Square")
