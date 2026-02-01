@@ -460,175 +460,183 @@ end)
 -- ESP FULL FIX (ANTI ESP FREEZE / FLICKER)
 --==================================================
 
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local LocalPlayer = Players.LocalPlayer
-
--- SETTINGS
+-- settings
 local settings = {
     defaultcolor = Color3.fromRGB(255,0,0),
     teamcheck = false,
     teamcolor = true,
     showName = true,
     showHealth = true
-}
+};
 
--- STORAGE
-local espCache = {}
+-- services
+local runService = game:GetService("RunService");
+local players = game:GetService("Players");
 
--- UTILS
-local function round(x,y)
-    return math.round(x), math.round(y)
-end
+-- variables
+local localPlayer = players.LocalPlayer;
+local camera = workspace.CurrentCamera;
 
--- CREATE ESP
+-- functions
+local newVector2, newColor3, newDrawing = Vector2.new, Color3.new, Drawing.new;
+local tan, rad = math.tan, math.rad;
+local round = function(...) 
+    local a = {}; 
+    for i,v in next, table.pack(...) do 
+        a[i] = math.round(v); 
+    end 
+    return unpack(a); 
+end;
+
+local wtvp = function(...)
+    local a, b = camera:WorldToViewportPoint(...)
+    return newVector2(a.X, a.Y), b, a.Z
+end;
+
+local espCache = {};
+
+-- create esp
 local function createEsp(player)
-    local esp = {}
+    local drawings = {};
 
-    esp.box = Drawing.new("Square")
-    esp.box.Thickness = 1
-    esp.box.Filled = false
-    esp.box.Visible = false
+    -- BOX
+    drawings.box = newDrawing("Square");
+    drawings.box.Thickness = 1;
+    drawings.box.Filled = false;
+    drawings.box.Color = settings.defaultcolor;
+    drawings.box.Visible = false;
+    drawings.box.ZIndex = 2;
 
-    esp.outline = Drawing.new("Square")
-    esp.outline.Thickness = 3
-    esp.outline.Filled = false
-    esp.outline.Color = Color3.new(0,0,0)
-    esp.outline.Visible = false
+    drawings.boxoutline = newDrawing("Square");
+    drawings.boxoutline.Thickness = 3;
+    drawings.boxoutline.Filled = false;
+    drawings.boxoutline.Color = Color3.new(0,0,0);
+    drawings.boxoutline.Visible = false;
+    drawings.boxoutline.ZIndex = 1;
 
-    esp.name = Drawing.new("Text")
-    esp.name.Size = 13
-    esp.name.Center = true
-    esp.name.Outline = true
-    esp.name.Font = 2
-    esp.name.Visible = false
+    -- NAME
+    drawings.name = newDrawing("Text");
+    drawings.name.Size = 13;
+    drawings.name.Center = true;
+    drawings.name.Outline = true;
+    drawings.name.Font = 2;
+    drawings.name.Visible = false;
 
-    esp.hpOutline = Drawing.new("Square")
-    esp.hpOutline.Filled = false
-    esp.hpOutline.Thickness = 1
-    esp.hpOutline.Color = Color3.new(0,0,0)
-    esp.hpOutline.Visible = false
+    -- HEALTH BAR
+    drawings.healthOutline = newDrawing("Square");
+    drawings.healthOutline.Filled = false;
+    drawings.healthOutline.Thickness = 1;
+    drawings.healthOutline.Color = Color3.new(0,0,0);
+    drawings.healthOutline.Visible = false;
 
-    esp.hpBar = Drawing.new("Square")
-    esp.hpBar.Filled = true
-    esp.hpBar.Visible = false
+    drawings.healthBar = newDrawing("Square");
+    drawings.healthBar.Filled = true;
+    drawings.healthBar.Color = Color3.fromRGB(0,255,0);
+    drawings.healthBar.Visible = false;
 
-    espCache[player] = esp
+    espCache[player] = drawings;
 end
 
 local function removeEsp(player)
     if espCache[player] then
-        for _,v in pairs(espCache[player]) do
-            v:Remove()
+        for _, drawing in pairs(espCache[player]) do
+            drawing:Remove();
         end
-        espCache[player] = nil
+        espCache[player] = nil;
     end
 end
 
--- UPDATE ESP (ANTI FLICKER)
+-- update esp
 local function updateEsp(player, esp)
-    local Camera = workspace.CurrentCamera
-    if not Camera then return end
+    local character = player.Character;
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid");
+    local hrp = character and character:FindFirstChild("HumanoidRootPart");
 
-    local char = player.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-
-    if not (char and hum and hrp) then
+    if not (character and humanoid and hrp) then
         for _,v in pairs(esp) do v.Visible = false end
-        return
+        return;
     end
 
-    local vec = Camera:WorldToViewportPoint(hrp.Position)
-    local depth = vec.Z
-
-    -- ❗ CHỈ ẨN KHI SAU CAMERA
-    if depth <= 0 then
+    local pos, visible, depth = wtvp(hrp.Position);
+    if not visible then
         for _,v in pairs(esp) do v.Visible = false end
-        return
+        return;
     end
 
-    local denom = depth * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2
-    if denom <= 0 then return end
+    local scaleFactor = 1 / (depth * tan(rad(camera.FieldOfView / 2)) * 2) * 1000;
+    local width, height = round(4 * scaleFactor, 5 * scaleFactor);
+    local x, y = round(pos.X, pos.Y);
 
-    local scale = 1000 / denom
-    local w,h = round(4*scale, 5*scale)
-    local x,y = round(vec.X, vec.Y)
+    -- BOX
+    esp.box.Size = newVector2(width, height);
+    esp.box.Position = newVector2(x - width/2, y - height/2);
+    esp.box.Color = settings.teamcolor and player.TeamColor.Color or settings.defaultcolor;
+    esp.box.Visible = true;
 
-    local color = settings.teamcolor and player.TeamColor.Color or settings.defaultcolor
+    esp.boxoutline.Size = esp.box.Size;
+    esp.boxoutline.Position = esp.box.Position;
+    esp.boxoutline.Visible = true;
 
-    esp.box.Size = Vector2.new(w,h)
-    esp.box.Position = Vector2.new(x-w/2, y-h/2)
-    esp.box.Color = color
-    esp.box.Visible = true
-
-    esp.outline.Size = esp.box.Size
-    esp.outline.Position = esp.box.Position
-    esp.outline.Visible = true
-
+    -- NAME
     if settings.showName then
-        esp.name.Text = player.Name
-        esp.name.Position = Vector2.new(x, y-h/2-14)
-        esp.name.Color = color
+        esp.name.Text = "@" .. player.Name
+        esp.name.Position = newVector2(x, y - height/2 - 14)
+        esp.name.Color = esp.box.Color
         esp.name.Visible = true
     else
         esp.name.Visible = false
     end
 
+    -- HEALTH
     if settings.showHealth then
-        local hp = math.clamp(hum.Health/hum.MaxHealth,0,1)
+        local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1);
+        local barHeight = height * healthPercent;
 
-        esp.hpOutline.Size = Vector2.new(4,h)
-        esp.hpOutline.Position = Vector2.new(x-w/2-6, y-h/2)
-        esp.hpOutline.Visible = true
+        esp.healthOutline.Size = newVector2(4, height);
+        esp.healthOutline.Position = newVector2(x - width/2 - 6, y - height/2);
+        esp.healthOutline.Visible = true;
 
-        esp.hpBar.Size = Vector2.new(2,h*hp)
-        esp.hpBar.Position = Vector2.new(
-            x-w/2-5,
-            y+h/2-(h*hp)
-        )
-        esp.hpBar.Color = Color3.fromRGB(255-255*hp,255*hp,0)
-        esp.hpBar.Visible = true
+        esp.healthBar.Size = newVector2(2, barHeight);
+        esp.healthBar.Position = newVector2(
+            x - width/2 - 5,
+            y + height/2 - barHeight
+        );
+
+        esp.healthBar.Color = Color3.fromRGB(
+            255 - (255 * healthPercent),
+            255 * healthPercent,
+            0
+        );
+
+        esp.healthBar.Visible = true
     else
-        esp.hpOutline.Visible = false
-        esp.hpBar.Visible = false
+        esp.healthBar.Visible = false
+        esp.healthOutline.Visible = false
     end
 end
 
--- INIT
-for _,p in pairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then
-        createEsp(p)
+-- init
+for _, player in pairs(players:GetPlayers()) do
+    if player ~= localPlayer then
+        createEsp(player);
     end
 end
 
-Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then
-        createEsp(p)
-    end
-end)
+players.PlayerAdded:Connect(createEsp);
+players.PlayerRemoving:Connect(removeEsp);
 
-Players.PlayerRemoving:Connect(removeEsp)
+runService:BindToRenderStep("esp", Enum.RenderPriority.Camera.Value, function()
+    for player, drawings in pairs(espCache) do
+        if settings.teamcheck and player.Team == localPlayer.Team then
+            for _,v in pairs(drawings) do v.Visible = false end
+            continue;
+        end
 
--- 🔥 RENDER SAU CAMERA (QUAN TRỌNG)
-RunService:BindToRenderStep(
-    "ESP",
-    Enum.RenderPriority.Camera.Value + 1,
-    function()
-        for p,esp in pairs(espCache) do
-            if settings.teamcheck and p.Team == LocalPlayer.Team then
-                for _,v in pairs(esp) do v.Visible = false end
-            else
-                updateEsp(p, esp)
-            end
+        if player ~= localPlayer then
+            updateEsp(player, drawings);
         end
     end
-)
+end)
 
 -- ==================================================
 -- ================= INFINITE YIELD =================
