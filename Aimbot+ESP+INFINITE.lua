@@ -594,7 +594,7 @@ end)
 refreshList()
 updateFollowUI()
 
-task.delay(5, function()
+task.delay(3, function()
 	main.Visible = true
 end)
 
