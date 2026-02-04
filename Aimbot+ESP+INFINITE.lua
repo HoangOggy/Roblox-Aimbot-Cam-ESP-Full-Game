@@ -28,7 +28,7 @@ local gui = Instance.new("ScreenGui")
 gui.IgnoreGuiInset = true
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
-
+-- 
 local bg = Instance.new("Frame")
 bg.Size = UDim2.fromScale(1, 1)
 bg.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
@@ -149,10 +149,11 @@ local function startESP()
 		d.box.Color = settings.color
 		d.box.Visible = false
 
+		-- Thay đổi outline dựa theo trạng thái Pin
 		d.outline = newDrawing("Square")
 		d.outline.Thickness = 3
 		d.outline.Filled = false
-		d.outline.Color = Color3.new(255,255,255) 
+		d.outline.Color = settings.color
 		d.outline.Visible = false
 
 		d.name = newDrawing("Text")
@@ -212,7 +213,8 @@ local function startESP()
 			end
 
 			-- KIỂM TRA MÀU SẮC DỰA TRÊN PIN
-			local currentColor = pinnedPlayers[plr.Name] and settings.pinColor or settings.color
+			local isPinned = pinnedPlayers[plr.Name]
+			local currentColor = isPinned and settings.pinColor or settings.color
 
 			local scale = 1 / (depth * tan(rad(camera.FieldOfView / 2)) * 2) * 1000
 			local w,h = round(4*scale, 5*scale)
@@ -220,15 +222,16 @@ local function startESP()
 
 			esp.box.Size = newVector2(w,h)
 			esp.box.Position = newVector2(x-w/2, y-h/2)
-			esp.box.Color = currentColor
+			esp.box.Color = currentColor -- Box thành màu đỏ nếu pin
 			esp.box.Visible = true
 
 			esp.outline.Size = esp.box.Size
 			esp.outline.Position = esp.box.Position
+			esp.outline.Color = currentColor -- Outline cũng đổi màu theo pin
 			esp.outline.Visible = true
 
 			if settings.showName then
-				esp.name.Text = (pinnedPlayers[plr.Name] and "[PINNED] " or "") .. "@" .. plr.Name
+				esp.name.Text = (isPinned and "[PINNED] " or "") .. "@" .. plr.Name
 				esp.name.Position = newVector2(x, y-h/2-14)
 				esp.name.Color = currentColor
 				esp.name.Visible = true
@@ -295,6 +298,7 @@ local following = false
 local holdingRight = false
 local targetPlayer = nil
 local safeList = {}
+local killAimTarget = nil
 local hotkey = Enum.KeyCode.F
 local waitingForKey = false
 local minimized = false
@@ -309,8 +313,8 @@ gui.Parent = game:GetService("CoreGui")
 -- MAIN FRAME (MỞ RỘNG SANG PHẢI)
 --------------------------------------------------
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 480, 0, 330) -- Mở rộng từ 240 lên 480
-main.Position = UDim2.new(0, 40, 0.5, -165)
+main.Size = UDim2.new(0, 540, 0, 340) -- Đã mở rộng thêm ngang và dọc
+main.Position = UDim2.new(0, 40, 0.5, -170)
 main.BackgroundColor3 = Color3.fromRGB(25,25,25)
 main.Active = true
 main.Draggable = true
@@ -319,7 +323,7 @@ Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
 
 -- Đường kẻ chia đôi
 local divider = Instance.new("Frame", main)
-divider.Size = UDim2.new(0, 2, 0, 280)
+divider.Size = UDim2.new(0, 2, 0, 290)
 divider.Position = UDim2.new(0.5, -1, 0, 40)
 divider.BackgroundColor3 = Color3.fromRGB(50,50,50)
 divider.BorderSizePixel = 0
@@ -414,7 +418,7 @@ searchBox.BackgroundColor3 = Color3.fromRGB(40,40,40)
 Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0,8)
 
 local listFrame = Instance.new("ScrollingFrame", main)
-listFrame.Size = UDim2.new(0.5,-20,0,160)
+listFrame.Size = UDim2.new(0.5,-20,0,180)
 listFrame.Position = UDim2.new(0,10,0,155)
 listFrame.ScrollBarThickness = 6
 listFrame.BackgroundTransparency = 1
@@ -424,9 +428,19 @@ layout.Padding = UDim.new(0,6)
 --------------------------------------------------
 -- CÁC THÀNH PHẦN BÊN PHẢI (PIN LIST)
 --------------------------------------------------
+local pinSearchBox = Instance.new("TextBox", main)
+pinSearchBox.Size = UDim2.new(0.5,-20,0,26)
+pinSearchBox.Position = UDim2.new(0.5,10,0,42)
+pinSearchBox.PlaceholderText = "Search for pin ESP..."
+pinSearchBox.Text = ""
+pinSearchBox.ClearTextOnFocus = false
+pinSearchBox.TextColor3 = Color3.new(1,1,1)
+pinSearchBox.BackgroundColor3 = Color3.fromRGB(40,40,40)
+Instance.new("UICorner", pinSearchBox).CornerRadius = UDim.new(0,8)
+
 local pinListFrame = Instance.new("ScrollingFrame", main)
-pinListFrame.Size = UDim2.new(0.5,-20,0,273)
-pinListFrame.Position = UDim2.new(0.5,10,0,42)
+pinListFrame.Size = UDim2.new(0.5,-20,0,234)
+pinListFrame.Position = UDim2.new(0.5,10,0,76)
 pinListFrame.ScrollBarThickness = 6
 pinListFrame.BackgroundTransparency = 1
 local pinLayout = Instance.new("UIListLayout", pinListFrame)
@@ -465,7 +479,7 @@ end
 local function refreshList()
 	-- Xóa list trái
 	for _, v in ipairs(listFrame:GetChildren()) do
-		if v:IsA("TextButton") then v:Destroy() end
+		if v:IsA("Frame") or v:IsA("TextButton") then v:Destroy() end
 	end
 	-- Xóa list phải
 	for _, v in ipairs(pinListFrame:GetChildren()) do
@@ -476,39 +490,93 @@ local function refreshList()
 		if plr ~= LocalPlayer then
 			-- Bên Trái: Aimbot/SafeList
 			if searchBox.Text == "" or plr.Name:lower():find(searchBox.Text:lower()) then
-				local btn = Instance.new("TextButton", listFrame)
-				btn.Size = UDim2.new(1,-6,0,28)
-				btn.Text = plr.Name .. (safeList[plr.Name] and " [SAFE]" or "")
-				btn.Font = Enum.Font.Gotham
-				btn.TextSize = 13
-				btn.TextColor3 = Color3.new(1,1,1)
-				btn.BackgroundColor3 = safeList[plr.Name]
-					and Color3.fromRGB(80,120,80)
-					or Color3.fromRGB(50,50,50)
-				Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+				-- Tạo 1 frame cho mỗi player bao quanh tên + 2 nút
+				local row = Instance.new("Frame")
+				row.Parent = listFrame
+				row.Size = UDim2.new(1,-6,0,28)
+				row.BackgroundTransparency = 1
+				local namelabel = Instance.new("TextLabel")
+				namelabel.Parent = row
+				namelabel.Text = plr.Name
+				namelabel.Size = UDim2.new(0, 130, 1, 0) -- Rộng hơn để tên dài không bị che
+				namelabel.Position = UDim2.new(0, 0, 0, 0)
+				namelabel.BackgroundTransparency = 1
+				namelabel.TextColor3 = Color3.new(1,1,1)
+				namelabel.Font = Enum.Font.Gotham
+				namelabel.TextXAlignment = Enum.TextXAlignment.Left
+				namelabel.TextSize = 13
 
-				btn.MouseButton1Click:Connect(function()
+				-- Nút SAFE
+				local safeBtn = Instance.new("TextButton")
+				safeBtn.Parent = row
+				safeBtn.Text = "SAFE"
+				safeBtn.Size = UDim2.new(0,56,1,0)
+				safeBtn.Position = UDim2.new(0, 120, 0, 0) -- Dịch sang trái gần tên hơn (từ 140 về 120)
+				safeBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 60)
+				safeBtn.TextColor3 = Color3.new(1,1,1)
+				safeBtn.Font = Enum.Font.GothamBold
+				safeBtn.TextSize = 13
+				Instance.new("UICorner", safeBtn).CornerRadius = UDim.new(0,6)
+				if safeList[plr.Name] then
+					safeBtn.BackgroundColor3 = Color3.fromRGB(80,220,80)
+					safeBtn.Text = "SAFE ✔"
+				end
+
+				-- Nút KILL
+				local killBtn = Instance.new("TextButton")
+				killBtn.Parent = row
+				killBtn.Text = "KILL"
+				killBtn.Size = UDim2.new(0,56,1,0)
+				killBtn.Position = UDim2.new(0, 182, 0, 0) -- Dịch sang trái gần tên hơn (từ 202 về 182)
+				killBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+				killBtn.TextColor3 = Color3.new(1,1,1)
+				killBtn.Font = Enum.Font.GothamBold
+				killBtn.TextSize = 13
+				Instance.new("UICorner", killBtn).CornerRadius = UDim.new(0,6)
+				if killAimTarget and killAimTarget == plr.Name then
+					killBtn.BackgroundColor3 = Color3.fromRGB(255,30,30)
+					killBtn.Text = "KILL ✔"
+				end
+
+				-- Chức năng nút SAFE: loại bỏ aim người này
+				safeBtn.MouseButton1Click:Connect(function()
 					safeList[plr.Name] = not safeList[plr.Name]
+					if safeList[plr.Name] and killAimTarget == plr.Name then
+						killAimTarget = nil -- Loại trường hợp kill và safe trùng lúc
+					end
+					refreshList()
+				end)
+
+				-- Chức năng nút KILL: aim duy nhất người này
+				killBtn.MouseButton1Click:Connect(function()
+					if killAimTarget == plr.Name then
+						killAimTarget = nil -- Tắt mode kill
+					else
+						killAimTarget = plr.Name
+						safeList[plr.Name] = false
+					end
 					refreshList()
 				end)
 			end
 
-			-- Bên Phải: Pin ESP
-			local pinBtn = Instance.new("TextButton", pinListFrame)
-			pinBtn.Size = UDim2.new(1,-6,0,28)
-			pinBtn.Text = (pinnedPlayers[plr.Name] and "📌 " or "") .. plr.Name
-			pinBtn.Font = Enum.Font.Gotham
-			pinBtn.TextSize = 13
-			pinBtn.TextColor3 = Color3.new(1,1,1)
-			pinBtn.BackgroundColor3 = pinnedPlayers[plr.Name]
-				and Color3.fromRGB(150,50,50)
-				or Color3.fromRGB(40,40,40)
-			Instance.new("UICorner", pinBtn).CornerRadius = UDim.new(0,6)
+			-- Bên Phải: Pin ESP (thêm filter theo pinSearchBox)
+			if pinSearchBox.Text == "" or plr.Name:lower():find(pinSearchBox.Text:lower()) then
+				local pinBtn = Instance.new("TextButton", pinListFrame)
+				pinBtn.Size = UDim2.new(1,-6,0,28)
+				pinBtn.Text = (pinnedPlayers[plr.Name] and "📌 " or "") .. plr.Name
+				pinBtn.Font = Enum.Font.Gotham
+				pinBtn.TextSize = 13
+				pinBtn.TextColor3 = Color3.new(1,1,1)
+				pinBtn.BackgroundColor3 = pinnedPlayers[plr.Name]
+					and Color3.fromRGB(150,50,50)
+					or Color3.fromRGB(40,40,40)
+				Instance.new("UICorner", pinBtn).CornerRadius = UDim.new(0,6)
 
-			pinBtn.MouseButton1Click:Connect(function()
-				pinnedPlayers[plr.Name] = not pinnedPlayers[plr.Name]
-				refreshList()
-			end)
+				pinBtn.MouseButton1Click:Connect(function()
+					pinnedPlayers[plr.Name] = not pinnedPlayers[plr.Name]
+					refreshList()
+				end)
+			end
 		end
 	end
 
@@ -544,7 +612,13 @@ UIS.InputBegan:Connect(function(input, gp)
 		local closest, dist = nil, math.huge
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
-				if not safeList[plr.Name] then
+				local isSafe = safeList[plr.Name]
+				if killAimTarget then
+					if plr.Name ~= killAimTarget then
+						isSafe = true
+					end
+				end
+				if not isSafe then
 					local pos, visible = Camera:WorldToScreenPoint(plr.Character.Head.Position)
 					if visible then
 						local d = (Vector2.new(pos.X,pos.Y) - mousePos).Magnitude
@@ -585,9 +659,14 @@ RunService.RenderStepped:Connect(function()
 end)
 
 searchBox:GetPropertyChangedSignal("Text"):Connect(refreshList)
+pinSearchBox:GetPropertyChangedSignal("Text"):Connect(refreshList)
 Players.PlayerAdded:Connect(refreshList)
 Players.PlayerRemoving:Connect(function(p)
 	pinnedPlayers[p.Name] = nil -- Xóa khỏi pin nếu out
+	if killAimTarget == p.Name then
+		killAimTarget = nil
+	end
+	safeList[p.Name] = nil
 	refreshList()
 end)
 
