@@ -9,7 +9,7 @@
 -- GLOBAL MERGE FLAG
 --------------------------------------------------
 local INTRO_DONE = false
-local pinnedPlayers = {} -- Danh sách lưu trữ người chơi bị Pin
+local pinnedPlayers = {}
 
 --------------------------------------------------
 -- SERVICES (INTRO + ESP)
